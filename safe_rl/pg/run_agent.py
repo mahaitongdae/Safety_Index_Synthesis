@@ -149,7 +149,7 @@ def run_polopt_agent(env_fn,
         if agent.penalty_param_loss:
             penalty_loss = -penalty_param * (cur_cost_ph - cost_lim)
         else:
-            penalty_loss = -penalty * (cur_cost_ph - cost_lim)
+            penalty_loss = -penalty * (cur_cost_ph - cost_lim) # penalty is an adaptive coefficient
         train_penalty = MpiAdamOptimizer(learning_rate=penalty_lr).minimize(penalty_loss)
 
 
@@ -340,6 +340,8 @@ def run_polopt_agent(env_fn,
 
     start_time = time.time()
     o, r, d, c, ep_ret, ep_cost, ep_len = env.reset(), 0, False, 0, 0, 0, 0
+    ep_real_dist = 0
+    ep_real_dist_road = 0
     cur_penalty = 0
     cum_cost = 0
 
@@ -368,6 +370,8 @@ def run_polopt_agent(env_fn,
 
             # Include penalty on cost
             c = info.get('cost', 0)
+            real_dist = info.get('real_dist', 0)
+            real_dist_road = info.get('real_dist_road', 0)
 
             # Track cumulative cost over training
             cum_cost += c
@@ -385,6 +389,8 @@ def run_polopt_agent(env_fn,
             ep_ret += r
             ep_cost += c
             ep_len += 1
+            ep_real_dist += real_dist
+            ep_real_dist_road += real_dist_road
 
             terminal = d or (ep_len == max_ep_len)
             if terminal or (t==local_steps_per_epoch-1):
@@ -404,12 +410,15 @@ def run_polopt_agent(env_fn,
 
                 # Only save EpRet / EpLen if trajectory finished
                 if terminal:
-                    logger.store(EpRet=ep_ret, EpLen=ep_len, EpCost=ep_cost)
+                    logger.store(EpRet=ep_ret, EpLen=ep_len, EpCost=ep_cost,
+                                 EpRealDist=ep_real_dist, EpRealDistRoad=ep_real_dist_road)
                 else:
                     print('Warning: trajectory cut off by epoch at %d steps.'%ep_len)
 
                 # Reset environment
                 o, r, d, c, ep_ret, ep_len, ep_cost = env.reset(), 0, False, 0, 0, 0, 0
+                ep_real_dist = 0
+                ep_real_dist_road = 0
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs-1):
@@ -435,6 +444,8 @@ def run_polopt_agent(env_fn,
         # Performance stats
         logger.log_tabular('EpRet', with_min_and_max=True)
         logger.log_tabular('EpCost', with_min_and_max=True)
+        logger.log_tabular('EpRealDist', with_min_and_max=True)
+        logger.log_tabular('EpRealDistRoad', with_min_and_max=True)
         logger.log_tabular('EpLen', average_only=True)
         logger.log_tabular('CumulativeCost', cumulative_cost)
         logger.log_tabular('CostRate', cost_rate)
