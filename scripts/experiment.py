@@ -57,17 +57,44 @@ def main(robot, task, algo, seed, exp_name, cpu):
          logger_kwargs=logger_kwargs
          )
 
+def main2(algo, seed, exp_name, cpu):
+    num_steps = 2e6
+    steps_per_epoch = 30000
+    epochs = int(num_steps / steps_per_epoch)
+    save_freq = 50
+    target_kl = 0.01
+    cost_lim = 25
+    mpi_fork(cpu)
+    # Prepare Logger
+    logger_kwargs = setup_logger_kwargs(exp_name, seed)
 
+    # Algo and Env
+    algo = eval('safe_rl.' + algo)
+    env_name = 'CrossroadEnd2end-v0'
+
+    algo(env_fn=lambda: gym.make(env_name),
+         ac_kwargs=dict(
+             hidden_sizes=(256, 256),
+         ),
+         epochs=epochs,
+         steps_per_epoch=steps_per_epoch,
+         save_freq=save_freq,
+         target_kl=target_kl,
+         cost_lim=cost_lim,
+         seed=seed,
+         logger_kwargs=logger_kwargs
+         )
 
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--robot', type=str, default='Point')
-    parser.add_argument('--task', type=str, default='Goal1')
-    parser.add_argument('--algo', type=str, default='ppo')
-    parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--exp_name', type=str, default='')
-    parser.add_argument('--cpu', type=int, default=1)
+    # parser.add_argument('--robot', type=str, default='Point')
+    # parser.add_argument('--task', type=str, default='Goal1')
+    parser.add_argument('--algo', type=str, default='cpo')
+    parser.add_argument('--seed', type=int, default=0, nargs='*')
+    parser.add_argument('--exp_name', type=str, default='CPO')
+    parser.add_argument('--cpu', type=int, default=15)
     args = parser.parse_args()
     exp_name = args.exp_name if not(args.exp_name=='') else None
-    main(args.robot, args.task, args.algo, args.seed, exp_name, args.cpu)
+    # main(args.robot, args.task, args.algo, args.seed, exp_name, args.cpu)
+    main2(args.algo, args.seed, exp_name, args.cpu)

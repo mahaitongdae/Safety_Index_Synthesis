@@ -44,7 +44,7 @@ class CPOBuffer:
             self.pi_info_bufs[k][self.ptr] = pi_info[k]
         self.ptr += 1
 
-    def finish_path(self, last_val=0, last_cval=0):
+    def finish_path(self, last_val=0, last_cval=0): # calculate advantages here
         path_slice = slice(self.path_start_idx, self.ptr)
         rews = np.append(self.rew_buf[path_slice], last_val)
         vals = np.append(self.val_buf[path_slice], last_val)
