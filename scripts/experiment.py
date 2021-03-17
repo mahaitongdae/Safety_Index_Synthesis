@@ -88,13 +88,13 @@ def main2(algo, seed, exp_name, cpu):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    # parser.add_argument('--robot', type=str, default='Point')
-    # parser.add_argument('--task', type=str, default='Goal1')
-    parser.add_argument('--algo', type=str, default='cpo')
+    parser.add_argument('--robot', type=str, default='Point')
+    parser.add_argument('--task', type=str, default='Goal1')
+    parser.add_argument('--algo', type=str, default='ppo_lagrangian')
     parser.add_argument('--seed', type=int, default=0, nargs='*')
-    parser.add_argument('--exp_name', type=str, default='CPO')
-    parser.add_argument('--cpu', type=int, default=15)
+    parser.add_argument('--exp_name', type=str, default='test_lam_net')
+    parser.add_argument('--cpu', type=int, default=40)
     args = parser.parse_args()
     exp_name = args.exp_name if not(args.exp_name=='') else None
-    # main(args.robot, args.task, args.algo, args.seed, exp_name, args.cpu)
-    main2(args.algo, args.seed, exp_name, args.cpu)
+    main(args.robot, args.task, args.algo, args.seed, exp_name, args.cpu)
+    # main2(args.algo, args.seed, exp_name, args.cpu)

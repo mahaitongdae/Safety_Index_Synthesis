@@ -24,10 +24,14 @@ def placeholder_from_space(space):
 def placeholders_from_spaces(*args):
     return [placeholder_from_space(space) for space in args]
 
-def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None):
+def mlp(x, hidden_sizes=(32,), activation=tf.tanh, output_activation=None, bias_initializer=None):
     for h in hidden_sizes[:-1]:
         x = tf.layers.dense(x, units=h, activation=activation)
-    return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
+    if bias_initializer == None:
+        return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation)
+    else:
+        return tf.layers.dense(x, units=hidden_sizes[-1], activation=output_activation,
+                               bias_initializer=tf.constant_initializer(bias_initializer))
 
 def get_vars(scope=''):
     return [x for x in tf.trainable_variables() if scope in x.name]
@@ -201,6 +205,7 @@ def mlp_actor_critic_with_lam(x, a, hidden_sizes=(64,64), activation=tf.tanh,
         vc = tf.squeeze(mlp(x, list(hidden_sizes) + [1], activation, None), axis=1)
 
     with tf.variable_scope('lam'):
-        lam = tf.squeeze(mlp(x, list(hidden_sizes) + [1], activation=tf.nn.elu, output_activation=tf.nn.relu), axis=1)
+        lam = tf.squeeze(mlp(x, list(hidden_sizes) + [1], activation=tf.nn.elu,
+                             output_activation=tf.nn.relu, bias_initializer=0.1), axis=1)
 
     return pi, logp, logp_pi, pi_info, pi_info_phs, d_kl, ent, v, vc, lam

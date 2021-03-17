@@ -1,6 +1,6 @@
 from functools import partial
 from safe_rl.pg.agents import PPOAgent, TRPOAgent, CPOAgent
-from safe_rl.pg.run_agent import run_polopt_agent
+from safe_rl.pg.run_agent_da import run_polopt_agent
 
 def ppo(**kwargs):
     ppo_kwargs = dict(

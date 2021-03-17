@@ -19,7 +19,7 @@ from safe_rl.utils.mpi_tools import mpi_fork, proc_id, num_procs, mpi_sum
 # (PPO, TRPO, their primal-dual equivalents, CPO)
 def run_polopt_agent(env_fn, 
                      agent=PPOAgent(),
-                     actor_critic=mlp_actor_critic_with_lam(),
+                     actor_critic=mlp_actor_critic_with_lam,
                      ac_kwargs=dict(), 
                      seed=0,
                      render=False,
@@ -42,7 +42,9 @@ def run_polopt_agent(env_fn,
                      target_kl=0.01, 
                      # Value learning:
                      vf_lr=1e-3,
-                     vf_iters=80, 
+                     vf_iters=80,
+                     # Mu learning:
+                     mu_lr=1e-4,
                      # Logging:
                      logger=None, 
                      logger_kwargs=dict(), 
@@ -134,23 +136,23 @@ def run_polopt_agent(env_fn,
     #  Create computation graph for penalty learning, if applicable           #
     #=========================================================================#
 
-    if agent.use_penalty:
-        with tf.variable_scope('penalty'):
-            # param_init = np.log(penalty_init)
-            param_init = np.log(max(np.exp(penalty_init)-1, 1e-8))
-            penalty_param = tf.get_variable('penalty_param',
-                                          initializer=float(param_init),
-                                          trainable=agent.learn_penalty,
-                                          dtype=tf.float32)
-        # penalty = tf.exp(penalty_param)
-        penalty = tf.nn.softplus(penalty_param)
-
-    if agent.learn_penalty:
-        if agent.penalty_param_loss:
-            penalty_loss = -penalty_param * (cur_cost_ph - cost_lim)
-        else:
-            penalty_loss = -penalty * (cur_cost_ph - cost_lim) # penalty is an adaptive coefficient
-        train_penalty = MpiAdamOptimizer(learning_rate=penalty_lr).minimize(penalty_loss)
+    # if agent.use_penalty:
+    #     with tf.variable_scope('penalty'):
+    #         # param_init = np.log(penalty_init)
+    #         param_init = np.log(max(np.exp(penalty_init)-1, 1e-8))
+    #         penalty_param = tf.get_variable('penalty_param',
+    #                                       initializer=float(param_init),
+    #                                       trainable=agent.learn_penalty,
+    #                                       dtype=tf.float32)
+    #     # penalty = tf.exp(penalty_param)
+    #     penalty = tf.nn.softplus(penalty_param)
+    #
+    # if agent.learn_penalty:
+    #     if agent.penalty_param_loss:
+    #         penalty_loss = -penalty_param * (cur_cost_ph - cost_lim)
+    #     else:
+    #         penalty_loss = -penalty * (cur_cost_ph - cost_lim) # penalty is an adaptive coefficient
+    #     train_penalty = MpiAdamOptimizer(learning_rate=penalty_lr).minimize(penalty_loss)
 
     # if agent.dual_ascent:
 
@@ -174,9 +176,9 @@ def run_polopt_agent(env_fn,
     else:
         surr_adv = tf.reduce_mean(ratio * adv_ph)
 
-    # Surrogate cost
-    surr_cost = tf.reduce_mean(tf.multiply(tf.stop_gradient(mu), ratio * cadv_ph)) #todo:why use cadv here?
-
+    # old: Surrogate cost now: penalty
+    penalty = tf.reduce_mean(tf.multiply(tf.stop_gradient(mu), ratio * cadv_ph)) #todo:why use cadv here?
+                                                                                   # because the grad is from IS ratio
     # complementary slackness cost
     cs_cost = tf.reduce_mean(tf.multiply(mu, tf.stop_gradient(cadv_ph)))
 
@@ -188,7 +190,7 @@ def run_polopt_agent(env_fn,
     if agent.objective_penalized:
         # pi_objective -= penalty * surr_cost
         # pi_objective /= (1 + penalty)
-        pi_objective += surr_cost
+        pi_objective -= penalty # max min [-(f(x)-mu * g(x))]
 
     # Loss function for pi is negative of pi_objective
     pi_loss = -pi_objective
@@ -207,7 +209,7 @@ def run_polopt_agent(env_fn,
             hvp += agent.damping_coeff * v_ph
 
         # Symbols needed for CG solver for CPO only
-        flat_b = tro.flat_grad(surr_cost, pi_params)
+        flat_b = tro.flat_grad(penalty, pi_params) # todo: change to penalty, not confirm right
 
         # Symbols for getting and setting params
         get_pi_params = tro.flat_concat(pi_params)
@@ -236,7 +238,7 @@ def run_polopt_agent(env_fn,
     # Provide training package to agent
     training_package.update(dict(pi_loss=pi_loss,
                                  mu_loss=mu_loss,
-                                 surr_cost=surr_cost,
+                                 penalty=penalty,
                                  d_kl=d_kl, 
                                  target_kl=target_kl,
                                  cost_lim=cost_lim))
@@ -304,7 +306,8 @@ def run_polopt_agent(env_fn,
         #=====================================================================#
 
         measures = dict(LossPi=pi_loss,
-                        SurrCost=surr_cost,
+                        LossMu=mu_loss,
+                        Penalty=penalty,
                         LossV=v_loss,
                         Entropy=ent)
         if not(agent.reward_penalized):
@@ -318,8 +321,8 @@ def run_polopt_agent(env_fn,
         #=====================================================================#
         #  Update penalty if learning penalty                                 #
         #=====================================================================#
-        if agent.learn_penalty:
-            sess.run(train_penalty, feed_dict={cur_cost_ph: cur_cost})
+        # if agent.learn_penalty:
+        #     sess.run(train_penalty, feed_dict={cur_cost_ph: cur_cost})
 
         #=====================================================================#
         #  Update policy                                                      #
@@ -385,8 +388,8 @@ def run_polopt_agent(env_fn,
 
             # Include penalty on cost
             c = info.get('cost', 0)
-            real_dist = info.get('real_dist', 0)
-            real_dist_road = info.get('real_dist_road', 0)
+            # real_dist = info.get('real_dist', 0)
+            # real_dist_road = info.get('real_dist_road', 0)
 
             # Track cumulative cost over training
             cum_cost += c
@@ -404,8 +407,6 @@ def run_polopt_agent(env_fn,
             ep_ret += r
             ep_cost += c
             ep_len += 1
-            ep_real_dist += real_dist
-            ep_real_dist_road += real_dist_road
 
             terminal = d or (ep_len == max_ep_len)
             if terminal or (t==local_steps_per_epoch-1):
@@ -425,15 +426,12 @@ def run_polopt_agent(env_fn,
 
                 # Only save EpRet / EpLen if trajectory finished
                 if terminal:
-                    logger.store(EpRet=ep_ret, EpLen=ep_len, EpCost=ep_cost,
-                                 EpRealDist=ep_real_dist, EpRealDistRoad=ep_real_dist_road)
+                    logger.store(EpRet=ep_ret, EpLen=ep_len, EpCost=ep_cost,) # EpRealDist=ep_real_dist, EpRealDistRoad=ep_real_dist_road
                 else:
                     print('Warning: trajectory cut off by epoch at %d steps.'%ep_len)
 
                 # Reset environment
                 o, r, d, c, ep_ret, ep_len, ep_cost = env.reset(), 0, False, 0, 0, 0, 0
-                ep_real_dist = 0
-                ep_real_dist_road = 0
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs-1):
@@ -459,8 +457,6 @@ def run_polopt_agent(env_fn,
         # Performance stats
         logger.log_tabular('EpRet', with_min_and_max=True)
         logger.log_tabular('EpCost', with_min_and_max=True)
-        logger.log_tabular('EpRealDist', with_min_and_max=True)
-        logger.log_tabular('EpRealDistRoad', with_min_and_max=True)
         logger.log_tabular('EpLen', average_only=True)
         logger.log_tabular('CumulativeCost', cumulative_cost)
         logger.log_tabular('CostRate', cost_rate)
@@ -474,8 +470,8 @@ def run_polopt_agent(env_fn,
         logger.log_tabular('DeltaLossPi', average_only=True)
 
         # Surr cost and change
-        logger.log_tabular('SurrCost', average_only=True)
-        logger.log_tabular('DeltaSurrCost', average_only=True)
+        logger.log_tabular('LossMu', average_only=True)
+        logger.log_tabular('DeltaLossMu', average_only=True)
 
         # V loss and change
         logger.log_tabular('LossV', average_only=True)
@@ -537,7 +533,7 @@ if __name__ == '__main__':
     except:
         print('Make sure to install Safety Gym to use constrained RL environments.')
 
-    mpi_fork(args.cpu)  # run parallel code with mpi
+    # mpi_fork(args.cpu)  # run parallel code with mpi
 
     # Prepare logger
     from safe_rl.utils.run_utils import setup_logger_kwargs
@@ -557,7 +553,7 @@ if __name__ == '__main__':
 
     run_polopt_agent(lambda : gym.make(args.env),
                      agent=agent,
-                     actor_critic=mlp_actor_critic,
+                     actor_critic=mlp_actor_critic_with_lam,
                      ac_kwargs=dict(hidden_sizes=[args.hid]*args.l), 
                      seed=args.seed, 
                      render=args.render, 

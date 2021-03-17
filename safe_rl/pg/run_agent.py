@@ -158,7 +158,7 @@ def run_polopt_agent(env_fn,
     #=========================================================================#
 
     # Likelihood ratio
-    ratio = tf.exp(logp - logp_old_ph)
+    ratio = tf.exp(logp - logp_old_ph) # the grad to policy params is here
 
     # Surrogate advantage / clipped surrogate advantage
     if agent.clipped_adv:
@@ -271,7 +271,7 @@ def run_polopt_agent(env_fn,
     #=========================================================================#
 
     def update():
-        cur_cost = logger.get_stats('EpCost')[0]
+        cur_cost = logger.get_stats('EpCost')[0] # cur_cost is a scalar
         c = cur_cost - cost_lim
         if c > 0 and agent.cares_about_cost:
             logger.log('Warning! Safety constraint is already violated.', 'red')
