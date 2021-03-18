@@ -138,11 +138,63 @@ class PPOAgent(Agent):
                 break
         self.logger.store(StopIter=i)
 
-        for i in range(20): # todo: future add to hyper-params
+    def log(self):
+        self.logger.log_tabular('StopIter', average_only=True)
+
+
+class PPO_Agent_with_Mu(Agent):
+
+    def __init__(self, clip_ratio=0.2,
+                 pi_lr=3e-4,
+                 mu_lr=3e-4,
+                 pi_iters=80,
+                 mu_iters=20,
+                 kl_margin=1.2,
+                 **kwargs):
+        super().__init__(**kwargs)
+        self.clip_ratio = clip_ratio
+        self.pi_lr = pi_lr
+        self.mu_lr = mu_lr
+        self.pi_iters = pi_iters
+        self.mu_iters = mu_iters
+        self.kl_margin = kl_margin
+        self.params.update(dict(
+            clipped_adv=True,
+            first_order=True,
+            constrained=False
+        ))
+
+    def update_pi(self, inputs):
+
+        # Things we need from training package
+        train_pi = self.training_package['train_pi']
+        d_kl = self.training_package['d_kl']
+        target_kl = self.training_package['target_kl']
+        train_mu = self.training_package['train_mu']
+
+        # Run the update
+        for i in range(self.pi_iters):
+            _, kl = self.sess.run([train_pi, d_kl], feed_dict=inputs)
+
+            kl = mpi_avg(kl)
+            if kl > self.kl_margin * target_kl:
+                self.logger.log('Early stopping at step %d due to reaching max kl.' % i)
+                break
+        self.logger.store(StopIter=i)
+
+    def update_mu(self, inputs):
+
+        # Things we need from training package
+        train_mu = self.training_package['train_mu']
+
+        # Run the update
+
+        for i in range(self.mu_iters):
             self.sess.run([train_mu], feed_dict=inputs)
 
     def log(self):
         self.logger.log_tabular('StopIter', average_only=True)
+
 
 
 class TrustRegionAgent(Agent):

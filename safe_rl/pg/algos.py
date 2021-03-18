@@ -1,5 +1,5 @@
 from functools import partial
-from safe_rl.pg.agents import PPOAgent, TRPOAgent, CPOAgent
+from safe_rl.pg.agents import PPOAgent, TRPOAgent, CPOAgent, PPO_Agent_with_Mu
 from safe_rl.pg.run_agent_da import run_polopt_agent
 
 def ppo(**kwargs):
@@ -22,6 +22,18 @@ def ppo_lagrangian(**kwargs):
                     penalty_param_loss=True
                     )
     agent = PPOAgent(**ppo_kwargs)
+    run_polopt_agent(agent=agent, **kwargs)
+
+def ppo_dual_ascent(**kwargs):
+    # PPO with multiplier network.
+    ppo_kwargs = dict(
+        reward_penalized=False,
+        objective_penalized=True,
+        learn_penalty=False,
+        penalty_param_loss=False,
+        dual_ascent=True
+    )
+    agent = PPO_Agent_with_Mu(**ppo_kwargs)
     run_polopt_agent(agent=agent, **kwargs)
 
 

@@ -44,7 +44,7 @@ def run_polopt_agent(env_fn,
                      vf_lr=1e-3,
                      vf_iters=80,
                      # Mu learning:
-                     mu_lr=1e-4,
+                     dual_ascent_interval=3,
                      # Logging:
                      logger=None, 
                      logger_kwargs=dict(), 
@@ -187,9 +187,7 @@ def run_polopt_agent(env_fn,
     # lam_objective = tf.reduce_mean(tf.multiply(mu, tf.stop_gradient(vc)))
 
     # Possibly include surr_cost in pi_objective
-    if agent.objective_penalized:
-        # pi_objective -= penalty * surr_cost
-        # pi_objective /= (1 + penalty)
+    if agent.objective_penalized or agent.dual_ascent:
         pi_objective -= penalty # max min [-(f(x)-mu * g(x))]
 
     # Loss function for pi is negative of pi_objective
@@ -287,7 +285,7 @@ def run_polopt_agent(env_fn,
     #  Create function for running update (called at end of each epoch)       #
     #=========================================================================#
 
-    def update():
+    def update(epoch):
         cur_cost = logger.get_stats('EpCost')[0]
         c = cur_cost - cost_lim
         if c > 0 and agent.cares_about_cost:
@@ -328,6 +326,12 @@ def run_polopt_agent(env_fn,
         #  Update policy                                                      #
         #=====================================================================#
         agent.update_pi(inputs)
+
+        # =====================================================================#
+        #  Update mu                                                           #
+        # =====================================================================#
+        if epoch % dual_ascent_interval == 0:
+            agent.update_mu(inputs)
 
         #=====================================================================#
         #  Update value function                                              #
@@ -438,7 +442,7 @@ def run_polopt_agent(env_fn,
         #=====================================================================#
         #  Run RL update                                                      #
         #=====================================================================#
-        update()
+        update(epoch)
 
         #=====================================================================#
         #  Cumulative cost calculations                                       #

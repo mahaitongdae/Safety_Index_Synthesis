@@ -11,7 +11,7 @@ def main(robot, task, algo, seed, exp_name, cpu):
     # Verify experiment
     robot_list = ['point', 'car', 'doggo']
     task_list = ['goal1', 'goal2', 'button1', 'button2', 'push1', 'push2']
-    algo_list = ['ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo']
+    algo_list = ['ppo', 'ppo_lagrangian','ppo_dual_ascent', 'trpo', 'trpo_lagrangian', 'cpo']
 
     algo = algo.lower()
     task = task.capitalize()
@@ -90,7 +90,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--robot', type=str, default='Point')
     parser.add_argument('--task', type=str, default='Goal1')
-    parser.add_argument('--algo', type=str, default='ppo')
+    parser.add_argument('--algo', type=str, default='ppo_dual_ascent')
     parser.add_argument('--seed', type=int, default=1, nargs='*')
     parser.add_argument('--exp_name', type=str, default='test_lam_net')
     parser.add_argument('--cpu', type=int, default=30)
