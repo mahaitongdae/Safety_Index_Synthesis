@@ -105,9 +105,9 @@ def plot_data(data, xaxis='Epoch', value="AverageEpRet",
     if ymax:
         plt.ylim(top=max(ymax, old_ymax))
 
-    plt.xlim([0, 2e6])
-
-    plt.ylim([-60, 0.0])
+    # plt.xlim([0, 2e6])
+    #
+    # plt.ylim([-60, 0.0])
     if title:
        plt.title(title)
 

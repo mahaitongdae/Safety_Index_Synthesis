@@ -104,7 +104,7 @@ class PPOAgent(Agent):
     
     def __init__(self, clip_ratio=0.2, 
                        pi_lr=3e-4,
-                       mu_lr=1e-4,
+                       mu_lr=3e-4,
                        pi_iters=80, 
                        kl_margin=1.2,
                        **kwargs):
@@ -131,13 +131,15 @@ class PPOAgent(Agent):
         # Run the update
         for i in range(self.pi_iters):
             _, kl = self.sess.run([train_pi, d_kl], feed_dict=inputs)
-            if i % 5 == 0: # todo: future add to hyper-params
-                self.sess.run([train_mu], feed_dict=inputs)
+
             kl = mpi_avg(kl)
             if kl > self.kl_margin * target_kl:
                 self.logger.log('Early stopping at step %d due to reaching max kl.'%i)
                 break
         self.logger.store(StopIter=i)
+
+        for i in range(20): # todo: future add to hyper-params
+            self.sess.run([train_mu], feed_dict=inputs)
 
     def log(self):
         self.logger.log_tabular('StopIter', average_only=True)

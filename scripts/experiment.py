@@ -27,7 +27,7 @@ def main(robot, task, algo, seed, exp_name, cpu):
         steps_per_epoch = 60000
     else:
         num_steps = 1e7
-        steps_per_epoch = 30000 # 30000
+        steps_per_epoch = 40000 # max episode length: 1000
     epochs = int(num_steps / steps_per_epoch)
     save_freq = 50
     target_kl = 0.01
@@ -91,9 +91,9 @@ if __name__ == '__main__':
     parser.add_argument('--robot', type=str, default='Point')
     parser.add_argument('--task', type=str, default='Goal1')
     parser.add_argument('--algo', type=str, default='ppo')
-    parser.add_argument('--seed', type=int, default=0, nargs='*')
+    parser.add_argument('--seed', type=int, default=1, nargs='*')
     parser.add_argument('--exp_name', type=str, default='test_lam_net')
-    parser.add_argument('--cpu', type=int, default=40)
+    parser.add_argument('--cpu', type=int, default=30)
     args = parser.parse_args()
     exp_name = args.exp_name if not(args.exp_name=='') else None
     main(args.robot, args.task, args.algo, args.seed, exp_name, args.cpu)
