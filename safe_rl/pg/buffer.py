@@ -12,7 +12,7 @@ class CPOBuffer:
     def __init__(self, size, 
                  obs_shape, act_shape, pi_info_shapes, 
                  gamma=0.99, lam=0.95,
-                 cost_gamma=0.99, cost_lam=0.95):
+                 cost_gamma=1, cost_lam=0.95):
         self.obs_buf = np.zeros(combined_shape(size, obs_shape), dtype=np.float32)
         self.act_buf = np.zeros(combined_shape(size, act_shape), dtype=np.float32)
         self.adv_buf = np.zeros(size, dtype=np.float32)
