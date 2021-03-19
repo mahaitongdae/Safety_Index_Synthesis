@@ -181,7 +181,7 @@ def run_polopt_agent(env_fn,
     penalty = tf.reduce_mean(tf.multiply(tf.stop_gradient(multiplier), surr_cadv)) #todo:why use cadv here?
                                                                                    # because the grad is from IS ratio
     # complementary slackness cost
-    violation = cret_ph - cost_lim
+    violation = tf.clip_by_value(cret_ph - cost_lim, -1, 1000)
     cs_cost = tf.reduce_mean(tf.multiply(multiplier, tf.stop_gradient(violation)))
 
     # Create policy objective function, including entropy regularization
@@ -309,6 +309,7 @@ def run_polopt_agent(env_fn,
                         LossMu=mu_loss,
                         Penalty=penalty,
                         Violation=violation,
+                        Multiplier=multiplier,
                         LossV=v_loss,
                         Entropy=ent)
         if not(agent.reward_penalized):
