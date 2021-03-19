@@ -27,7 +27,7 @@ def main(robot, task, algo, seed, exp_name, cpu):
         steps_per_epoch = 60000
     else:
         num_steps = 1e7
-        steps_per_epoch = 40000 # max episode length: 1000
+        steps_per_epoch = 30000 # max episode length: 1000
     epochs = int(num_steps / steps_per_epoch)
     save_freq = 50
     target_kl = 0.01
@@ -37,7 +37,7 @@ def main(robot, task, algo, seed, exp_name, cpu):
     mpi_fork(cpu, bind_to_core=True)
 
     # Prepare Logger
-    exp_name = exp_name or (algo + '_' + robot.lower() + task.lower())
+    exp_name = exp_name # or (algo + '_' + robot.lower() + task.lower())
     logger_kwargs = setup_logger_kwargs(exp_name, seed)
 
     # Algo and Env
@@ -91,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument('--robot', type=str, default='Point')
     parser.add_argument('--task', type=str, default='Goal1')
     parser.add_argument('--algo', type=str, default='ppo_dual_ascent')
-    parser.add_argument('--seed', type=int, default=1, nargs='*')
+    parser.add_argument('--seed', type=int, default=0, nargs='*')
     parser.add_argument('--exp_name', type=str, default='test_lam_net')
     parser.add_argument('--cpu', type=int, default=30)
     args = parser.parse_args()

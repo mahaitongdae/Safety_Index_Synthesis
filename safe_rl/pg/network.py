@@ -206,6 +206,6 @@ def mlp_actor_critic_with_lam(x, a, hidden_sizes=(64,64), activation=tf.tanh,
 
     with tf.variable_scope('lam'):
         lam = tf.squeeze(mlp(x, list(hidden_sizes) + [1], activation=tf.nn.elu,
-                             output_activation=tf.nn.relu, bias_initializer=0.1), axis=1)
+                             output_activation=tf.nn.softplus, bias_initializer=1), axis=1)
 
     return pi, logp, logp_pi, pi_info, pi_info_phs, d_kl, ent, v, vc, lam

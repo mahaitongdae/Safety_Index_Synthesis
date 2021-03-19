@@ -3,7 +3,7 @@ import tensorflow as tf
 import gym
 import time
 import safe_rl.pg.trust_region as tro
-from safe_rl.pg.agents import PPOAgent, TRPOAgent, CPOAgent
+from safe_rl.pg.agents import PPOAgent, TRPOAgent, CPOAgent, PPO_Agent_with_Mu
 from safe_rl.pg.buffer import CPOBuffer
 from safe_rl.pg.network import count_vars, \
                                get_vars, \
@@ -86,7 +86,7 @@ def run_polopt_agent(env_fn,
 
     # Outputs from actor critic
     ac_outs = actor_critic(x_ph, a_ph, **ac_kwargs)
-    pi, logp, logp_pi, pi_info, pi_info_phs, d_kl, ent, v, vc, mu = ac_outs
+    pi, logp, logp_pi, pi_info, pi_info_phs, d_kl, ent, v, vc, multiplier = ac_outs
 
     # Organize placeholders for zipping with data from buffer on updates
     buf_phs = [x_ph, a_ph, adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph]
@@ -177,10 +177,12 @@ def run_polopt_agent(env_fn,
         surr_adv = tf.reduce_mean(ratio * adv_ph)
 
     # old: Surrogate cost now: penalty
-    penalty = tf.reduce_mean(tf.multiply(tf.stop_gradient(mu), ratio * cadv_ph)) #todo:why use cadv here?
+    surr_cadv = ratio * cadv_ph
+    penalty = tf.reduce_mean(tf.multiply(tf.stop_gradient(multiplier), surr_cadv)) #todo:why use cadv here?
                                                                                    # because the grad is from IS ratio
     # complementary slackness cost
-    cs_cost = tf.reduce_mean(tf.multiply(mu, tf.stop_gradient(vc - cost_lim)))
+    violation = cret_ph - cost_lim
+    cs_cost = tf.reduce_mean(tf.multiply(multiplier, tf.stop_gradient(violation)))
 
     # Create policy objective function, including entropy regularization
     pi_objective = surr_adv + ent_reg * ent
@@ -188,10 +190,10 @@ def run_polopt_agent(env_fn,
 
     # Possibly include surr_cost in pi_objective
     if agent.objective_penalized or agent.dual_ascent:
-        pi_objective -= penalty # max min [-(f(x)-mu * g(x))]
+        lagrangian = pi_objective - penalty # max min [-(f(x)-mu * g(x))]
 
     # Loss function for pi is negative of pi_objective
-    pi_loss = -pi_objective
+    pi_loss = - lagrangian # todo refine if
 
     # Loss function for mu
     mu_loss = -cs_cost
@@ -272,7 +274,7 @@ def run_polopt_agent(env_fn,
     sess.run(sync_all_params())
 
     # Setup model saving
-    logger.setup_tf_saver(sess, inputs={'x': x_ph}, outputs={'pi': pi, 'v': v, 'vc': vc, 'mu': mu})
+    logger.setup_tf_saver(sess, inputs={'x': x_ph}, outputs={'pi': pi, 'v': v, 'vc': vc, 'multiplier': multiplier})
 
 
     #=========================================================================#
@@ -298,6 +300,7 @@ def run_polopt_agent(env_fn,
         inputs = {k:v for k,v in zip(buf_phs, buf.get())}
         inputs[surr_cost_rescale_ph] = logger.get_stats('EpLen')[0]
         inputs[cur_cost_ph] = cur_cost
+        # print(inputs.keys())
 
         #=====================================================================#
         #  Make some measurements before updating                             #
@@ -369,8 +372,9 @@ def run_polopt_agent(env_fn,
 
     for epoch in range(epochs):
 
-        if agent.use_penalty:
-            cur_penalty = sess.run(penalty)
+        # if agent.use_penalty:
+        #     cur_penalty = sess.run(penalty)
+        cur_penalty = 0 # todo: remove relevant with cur_penalty
 
         for t in range(local_steps_per_epoch):
 
@@ -508,7 +512,7 @@ def run_polopt_agent(env_fn,
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--agent', type=str, default='ppo')
+    parser.add_argument('--agent', type=str, default='ppo_dual_ascent')
     parser.add_argument('--env', type=str, default='Safexp-PointGoal1-v0')
     parser.add_argument('--hid', type=int, default=64)
     parser.add_argument('--l', type=int, default=2)
@@ -546,12 +550,19 @@ if __name__ == '__main__':
                         objective_penalized=args.objective_penalized,
                         learn_penalty=args.learn_penalty,
                         penalty_param_loss=args.penalty_param_loss)
+    dual_ascent_kwargs = dict(reward_penalized=False,
+                        objective_penalized=True,
+                        learn_penalty=False,
+                        penalty_param_loss=False,
+                        dual_ascent=True)
     if args.agent=='ppo':
         agent = PPOAgent(**agent_kwargs)
     elif args.agent=='trpo':
         agent = TRPOAgent(**agent_kwargs)
     elif args.agent=='cpo':
         agent = CPOAgent(**agent_kwargs)
+    elif args.agent=='ppo_dual_ascent':
+        agent = PPO_Agent_with_Mu(**dual_ascent_kwargs)
 
     run_polopt_agent(lambda : gym.make(args.env),
                      agent=agent,
