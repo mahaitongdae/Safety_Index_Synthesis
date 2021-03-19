@@ -300,7 +300,6 @@ def run_polopt_agent(env_fn,
         inputs = {k:v for k,v in zip(buf_phs, buf.get())}
         inputs[surr_cost_rescale_ph] = logger.get_stats('EpLen')[0]
         inputs[cur_cost_ph] = cur_cost
-        # print(inputs.keys())
 
         #=====================================================================#
         #  Make some measurements before updating                             #
@@ -309,6 +308,7 @@ def run_polopt_agent(env_fn,
         measures = dict(LossPi=pi_loss,
                         LossMu=mu_loss,
                         Penalty=penalty,
+                        Violation=violation,
                         LossV=v_loss,
                         Entropy=ent)
         if not(agent.reward_penalized):
@@ -478,6 +478,9 @@ def run_polopt_agent(env_fn,
         # Surr cost and change
         logger.log_tabular('LossMu', average_only=True)
         logger.log_tabular('DeltaLossMu', average_only=True)
+        logger.log_tabular('Violation', with_min_and_max=True)
+        logger.log_tabular('Multiplier', with_min_and_max=True)
+
 
         # V loss and change
         logger.log_tabular('LossV', average_only=True)
