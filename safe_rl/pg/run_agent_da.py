@@ -13,7 +13,7 @@ from safe_rl.pg.network import count_vars, \
 from safe_rl.pg.utils import values_as_sorted_list
 from safe_rl.utils.logx import EpochLogger
 from safe_rl.utils.mpi_tf import MpiAdamOptimizer, sync_all_params
-from safe_rl.utils.mpi_tools import mpi_fork, proc_id, num_procs, mpi_sum
+from safe_rl.utils.mpi_tools import mpi_fork, proc_id, num_procs, mpi_sum, mpi_statistics_scalar
 
 # Multi-purpose agent runner for policy optimization algos 
 # (PPO, TRPO, their primal-dual equivalents, CPO)
@@ -44,7 +44,7 @@ def run_polopt_agent(env_fn,
                      vf_lr=1e-3,
                      vf_iters=80,
                      # Mu learning:
-                     dual_ascent_interval=3,
+                     dual_ascent_interval=1,
                      # Logging:
                      logger=None, 
                      logger_kwargs=dict(), 
@@ -78,7 +78,7 @@ def run_polopt_agent(env_fn,
     x_ph, a_ph = placeholders_from_spaces(env.observation_space, env.action_space)
 
     # Inputs to computation graph for batch data
-    adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph = placeholders(*(None for _ in range(5)))
+    adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph = placeholders(*(None for _ in range(6)))
 
     # Inputs to computation graph for special purposes
     surr_cost_rescale_ph = tf.placeholder(tf.float32, shape=())
@@ -89,7 +89,7 @@ def run_polopt_agent(env_fn,
     pi, logp, logp_pi, pi_info, pi_info_phs, d_kl, ent, v, vc, multiplier = ac_outs
 
     # Organize placeholders for zipping with data from buffer on updates
-    buf_phs = [x_ph, a_ph, adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph]
+    buf_phs = [x_ph, a_ph, adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph]
     buf_phs += values_as_sorted_list(pi_info_phs)
 
     # Organize symbols we have to compute at each step of acting in env
@@ -181,8 +181,8 @@ def run_polopt_agent(env_fn,
     penalty = tf.reduce_mean(tf.multiply(tf.stop_gradient(multiplier), surr_cadv)) #todo:why use cadv here?
                                                                                    # because the grad is from IS ratio
     # complementary slackness cost
-    violation = tf.clip_by_value(cret_ph - cost_lim, -1, 1000)
-    cs_cost = tf.reduce_mean(tf.multiply(multiplier, tf.stop_gradient(violation)))
+    clipped_vio = tf.clip_by_value(vio_ph, -0.2, 100)
+    cs_cost = tf.reduce_mean(tf.multiply(multiplier, tf.stop_gradient(clipped_vio)))
 
     # Create policy objective function, including entropy regularization
     pi_objective = surr_adv + ent_reg * ent
@@ -308,7 +308,7 @@ def run_polopt_agent(env_fn,
         measures = dict(LossPi=pi_loss,
                         LossMu=mu_loss,
                         Penalty=penalty,
-                        Violation=violation,
+                        Violation=clipped_vio,
                         Multiplier=multiplier,
                         LossV=v_loss,
                         Entropy=ent)

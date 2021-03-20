@@ -58,6 +58,7 @@ class CPOBuffer:
         self.cadv_buf[path_slice] = discount_cumsum(cdeltas, self.cost_gamma * self.cost_lam)
         self.cret_buf[path_slice] = discount_cumsum(costs, self.cost_gamma)[:-1]
 
+
         self.path_start_idx = self.ptr
 
     def get(self):
@@ -72,6 +73,12 @@ class CPOBuffer:
         cadv_mean, _ = mpi_statistics_scalar(self.cadv_buf)
         self.cadv_buf -= cadv_mean
 
+        # Calculate violation return
+        cost_lim = 15 # todo
+        self.violation_buf = self.cret_buf - cost_lim
+        _, vio_std = mpi_statistics_scalar(self.violation_buf)
+        self.violation_buf /= (vio_std + EPS)
+
         return [self.obs_buf, self.act_buf, self.adv_buf,
                 self.cadv_buf, self.ret_buf, self.cret_buf,
-                self.logp_buf] + values_as_sorted_list(self.pi_info_bufs)
+                self.logp_buf, self.violation_buf] + values_as_sorted_list(self.pi_info_bufs)

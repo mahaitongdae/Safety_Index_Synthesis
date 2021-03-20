@@ -148,7 +148,7 @@ class PPO_Agent_with_Mu(Agent):
                  pi_lr=3e-4,
                  mu_lr=1e-4,
                  pi_iters=80,
-                 mu_iters=1,
+                 mu_iters=5,
                  kl_margin=1.2,
                  **kwargs):
         super().__init__(**kwargs)

@@ -31,7 +31,7 @@ def main(robot, task, algo, seed, exp_name, cpu):
     epochs = int(num_steps / steps_per_epoch)
     save_freq = 50
     target_kl = 0.01
-    cost_lim = 25
+    cost_lim = 15
 
     # Fork for parallelizing
     mpi_fork(cpu, bind_to_core=True)
@@ -93,7 +93,7 @@ if __name__ == '__main__':
     parser.add_argument('--algo', type=str, default='ppo_dual_ascent')
     parser.add_argument('--seed', type=int, default=0, nargs='*')
     parser.add_argument('--exp_name', type=str, default='test_lam_net')
-    parser.add_argument('--cpu', type=int, default=6)
+    parser.add_argument('--cpu', type=int, default=30)
     args = parser.parse_args()
     exp_name = args.exp_name if not(args.exp_name=='') else None
     main(args.robot, args.task, args.algo, args.seed, exp_name, args.cpu)
