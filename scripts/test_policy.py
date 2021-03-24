@@ -42,10 +42,10 @@ def run_policy(env, get_action, max_ep_len=None, num_episodes=100, render=True):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('fpath', type=str)
-    parser.add_argument('--len', '-l', type=int, default=0)
-    parser.add_argument('--episodes', '-n', type=int, default=100)
-    parser.add_argument('--norender', '-nr', action='store_true')
+    parser.add_argument('fpath', type=str, default='data/2021-03-20_ppo_dual_ascent_PointGoal1/2021-03-20_14-58-51-ppo_dual_ascent_PointGoal1_s0_success')
+    parser.add_argument('--len', '-l', type=int, default=None)
+    parser.add_argument('--episodes', '-n', type=int, default=5)
+    parser.add_argument('--norender', '-nr', action='store_true', default=False)
     parser.add_argument('--itr', '-i', type=int, default=-1)
     parser.add_argument('--deterministic', '-d', action='store_true')
     args = parser.parse_args()
