@@ -12,7 +12,7 @@ class CPOBuffer:
     def __init__(self, size, 
                  obs_shape, act_shape, pi_info_shapes, 
                  gamma=0.99, lam=0.95,
-                 cost_gamma=1, cost_lam=0.95):
+                 cost_gamma=1, cost_lam=0.95, cost_lim=0):
         self.obs_buf = np.zeros(combined_shape(size, obs_shape), dtype=np.float32)
         self.act_buf = np.zeros(combined_shape(size, act_shape), dtype=np.float32)
         self.adv_buf = np.zeros(size, dtype=np.float32)
@@ -30,6 +30,7 @@ class CPOBuffer:
         self.gamma, self.lam = gamma, lam
         self.cost_gamma, self.cost_lam = cost_gamma, cost_lam
         self.ptr, self.path_start_idx, self.max_size = 0, 0, size
+        self.cost_lim = cost_lim
 
     def store(self, obs, act, rew, val, cost, cval, logp, pi_info):
         assert self.ptr < self.max_size     # buffer has to have room so you can store
@@ -74,8 +75,7 @@ class CPOBuffer:
         self.cadv_buf -= cadv_mean
 
         # Calculate violation return
-        cost_lim = 15 # todo
-        self.violation_buf = self.cret_buf - cost_lim
+        self.violation_buf = self.cret_buf - self.cost_lim
         _, vio_std = mpi_statistics_scalar(self.violation_buf)
         self.violation_buf /= (vio_std + EPS)
 

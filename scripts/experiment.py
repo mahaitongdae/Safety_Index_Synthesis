@@ -13,7 +13,7 @@ def main(env_name, algo, seed, exp_name, cpu):
 
     # Verify experiment
 
-    algo_list = ['ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo']
+    algo_list = ['ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo', 'ppo_dual_ascent']
 
     algo = algo.lower()
     assert algo in algo_list, "Invalid algo"
