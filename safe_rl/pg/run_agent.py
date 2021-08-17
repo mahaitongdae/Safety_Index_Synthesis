@@ -30,12 +30,12 @@ def run_polopt_agent(env_fn,
                      # Discount factors:
                      gamma=0.99, 
                      lam=0.97,
-                     cost_gamma=0.99, 
+                     cost_gamma=0.0,
                      cost_lam=0.97, 
                      # Policy learning:
                      ent_reg=0.,
                      # Cost constraints / penalties:
-                     cost_lim=25,
+                     cost_lim=0,
                      penalty_init=1.,
                      penalty_lr=5e-2,
                      # KL divergence:
@@ -339,9 +339,9 @@ def run_polopt_agent(env_fn,
     #=========================================================================#
 
     start_time = time.time()
-    o, r, d, c, ep_ret, ep_cost, ep_len = env.reset(), 0, False, 0, 0, 0, 0
-    ep_real_dist = 0
-    ep_real_dist_road = 0
+    o, r, d, c, ep_ret, ep_cost, ep_len, ep_sicstr_vio = env.reset(), 0, False, 0, 0, 0, 0, 0
+    # ep_real_dist = 0
+    # ep_real_dist_road = 0
     cur_penalty = 0
     cum_cost = 0
 
@@ -370,8 +370,10 @@ def run_polopt_agent(env_fn,
 
             # Include penalty on cost
             c = info.get('cost', 0)
-            real_dist = info.get('real_dist', 0)
-            real_dist_road = info.get('real_dist_road', 0)
+            delta_phi = info.get('delta_phi', 0)
+            sicstr_vio = 1 if delta_phi > 0 else 0
+            # real_dist = info.get('real_dist', 0)
+            # real_dist_road = info.get('real_dist_road', 0)
 
             # Track cumulative cost over training
             cum_cost += c
@@ -382,15 +384,15 @@ def run_polopt_agent(env_fn,
                 r_total = r_total / (1 + cur_penalty)
                 buf.store(o, a, r_total, v_t, 0, 0, logp_t, pi_info_t)
             else:
-                buf.store(o, a, r, v_t, c, vc_t, logp_t, pi_info_t)
+                buf.store(o, a, r, v_t, delta_phi, vc_t, logp_t, pi_info_t)
             logger.store(VVals=v_t, CostVVals=vc_t)
 
             o = o2
             ep_ret += r
             ep_cost += c
             ep_len += 1
-            ep_real_dist += real_dist
-            ep_real_dist_road += real_dist_road
+            # ep_real_dist += real_dist
+            # ep_real_dist_road += real_dist_road
 
             terminal = d or (ep_len == max_ep_len)
             if terminal or (t==local_steps_per_epoch-1):
@@ -411,14 +413,12 @@ def run_polopt_agent(env_fn,
                 # Only save EpRet / EpLen if trajectory finished
                 if terminal:
                     logger.store(EpRet=ep_ret, EpLen=ep_len, EpCost=ep_cost,
-                                 EpRealDist=ep_real_dist, EpRealDistRoad=ep_real_dist_road)
+                                 EpPhiCstrVio=ep_sicstr_vio)
                 else:
                     print('Warning: trajectory cut off by epoch at %d steps.'%ep_len)
 
                 # Reset environment
-                o, r, d, c, ep_ret, ep_len, ep_cost = env.reset(), 0, False, 0, 0, 0, 0
-                ep_real_dist = 0
-                ep_real_dist_road = 0
+                o, r, d, c, ep_ret, ep_len, ep_cost, ep_sicstr_vio = env.reset(), 0, False, 0, 0, 0, 0, 0
 
         # Save model
         if (epoch % save_freq == 0) or (epoch == epochs-1):

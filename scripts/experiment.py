@@ -4,34 +4,32 @@ import safety_gym
 import safe_rl
 from safe_rl.utils.run_utils import setup_logger_kwargs
 from safe_rl.utils.mpi_tools import mpi_fork
+from safe_rl.utils.custom_env_utils import register_custom_env
 
 
-def main(robot, task, algo, seed, exp_name, cpu):
+def main(env_name, algo, seed, exp_name, cpu):
+
+    register_custom_env()
 
     # Verify experiment
-    robot_list = ['point', 'car', 'doggo']
-    task_list = ['goal1', 'goal2', 'button1', 'button2', 'push1', 'push2']
-    algo_list = ['ppo', 'ppo_lagrangian','ppo_dual_ascent', 'trpo', 'trpo_lagrangian', 'cpo']
+
+    algo_list = ['ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo']
 
     algo = algo.lower()
-    task = task.capitalize()
-    robot = robot.capitalize()
     assert algo in algo_list, "Invalid algo"
-    assert task.lower() in task_list, "Invalid task"
-    assert robot.lower() in robot_list, "Invalid robot"
 
     # Hyperparameters
-    exp_name = algo + '_' + robot + task
-    if robot=='Doggo':
-        num_steps = 1e8
-        steps_per_epoch = 60000
-    else:
-        num_steps = 1e7
-        steps_per_epoch = 30000 # max episode length: 1000
+    exp_name = algo + '_' + env_name
+    # if robot=='Doggo':
+    #     num_steps = 1e8
+    #     steps_per_epoch = 60000
+    # else:
+    num_steps = 2e6
+    steps_per_epoch = 8000
     epochs = int(num_steps / steps_per_epoch)
     save_freq = 50
     target_kl = 0.01
-    cost_lim = 15
+    cost_lim = 0
 
     # Fork for parallelizing
     mpi_fork(cpu, bind_to_core=True)
@@ -42,7 +40,7 @@ def main(robot, task, algo, seed, exp_name, cpu):
 
     # Algo and Env
     algo = eval('safe_rl.'+algo)
-    env_name = 'Safexp-'+robot+task+'-v0'
+    # env_name = 'Safexp-'+robot+task+'-v0'
 
     algo(env_fn=lambda: gym.make(env_name),
          ac_kwargs=dict(
@@ -88,13 +86,13 @@ def main2(algo, seed, exp_name, cpu):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--robot', type=str, default='Point')
-    parser.add_argument('--task', type=str, default='Goal1')
+    # parser.add_argument('--robot', type=str, default='Car')
+    # parser.add_argument('--task', type=str, default='Goal2')
+    parser.add_argument('--env_name', type=str, default='Safexp-CustomGoal2-v0')
     parser.add_argument('--algo', type=str, default='ppo_dual_ascent')
-    parser.add_argument('--seed', type=int, default=0, nargs='*')
-    parser.add_argument('--exp_name', type=str, default='test_lam_net')
-    parser.add_argument('--cpu', type=int, default=30)
+    parser.add_argument('--seed', type=int, default=2)
+    parser.add_argument('--exp_name', type=str, default='for exp')
+    parser.add_argument('--cpu', type=int, default=1)
     args = parser.parse_args()
     exp_name = args.exp_name if not(args.exp_name=='') else None
-    main(args.robot, args.task, args.algo, args.seed, exp_name, args.cpu)
-    # main2(args.algo, args.seed, exp_name, args.cpu)
+    main(args.env_name, args.algo, args.seed, exp_name, args.cpu)
