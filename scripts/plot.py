@@ -54,8 +54,8 @@ def plot_data(data, xaxis='Epoch', value="AverageEpRet",
     if isinstance(data, list):
         data = pd.concat(data, ignore_index=True)
 
-    font_scale = 1. if paper else 1.
-    print(font_scale)
+    font_scale = 1. if paper else 1.5
+
     sns.set(style="darkgrid", font_scale=font_scale)
     """
     #sns.set_palette(sns.color_palette('muted'))
@@ -105,11 +105,8 @@ def plot_data(data, xaxis='Epoch', value="AverageEpRet",
     if ymax:
         plt.ylim(top=max(ymax, old_ymax))
 
-    # plt.xlim([0, 2e6])
-    #
-    # plt.ylim([-60, 0.0])
-    if title:
-       plt.title(title)
+    #if title:
+    #    plt.title(title)
 
     if paper:
         plt.gcf().set_size_inches(3.85,2.75)
@@ -250,7 +247,7 @@ def get_all_datasets(all_logdirs, legend=None, select=None, exclude=None):
 
 def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,  
                font_scale=1.5, smooth=1, select=None, exclude=None, estimator='mean',
-               paper=True, hidelegend=False, title=None, savedir=None, show=True,
+               paper=False, hidelegend=False, title=None, savedir=None, show=True,
                clear_xticks=False):
     data = get_all_datasets(all_logdirs, legend, select, exclude)
     values = values if isinstance(values, list) else [values]
@@ -271,19 +268,19 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--logdir', default='data/2021-02-21_Crossroad/', nargs='*')
+    parser.add_argument('--logdir', nargs='*',default=['/home/mahaitong/PycharmProjects/safety-starter-agents/data/2021-08-18_ppo_dual_ascent_Safexp-CustomGoal3-v0'])
     parser.add_argument('--legend', '-l', nargs='*')
     parser.add_argument('--xaxis', '-x', default='TotalEnvInteracts')
-    parser.add_argument('--value', '-y', default='Performance', nargs='*')
+    parser.add_argument('--value', '-y', default='AverageEpRet', nargs='*')
     parser.add_argument('--count', action='store_true')
-    parser.add_argument('--smooth', '-s', type=int, default=1)
+    parser.add_argument('--smooth', '-s', type=int, default=8)
     parser.add_argument('--select', nargs='*')
     parser.add_argument('--exclude', nargs='*')
     parser.add_argument('--est', default='mean')
     parser.add_argument('--paper', action='store_true')
     parser.add_argument('--hidelegend', '-hl', action='store_true')
-    parser.add_argument('--title', type=str, default='Performance')
-    parser.add_argument('--savedir', type=str, default='data/figure')
+    parser.add_argument('--title', type=str, default='')
+    parser.add_argument('--savedir', type=str, default='')
     parser.add_argument('--dont_show', action='store_true')
     parser.add_argument('--clearx', action='store_true')
     args = parser.parse_args()
