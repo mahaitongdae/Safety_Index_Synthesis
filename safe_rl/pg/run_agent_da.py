@@ -400,6 +400,7 @@ def run_polopt_agent(env_fn,
             # Include penalty on cost
             c = info.get('cost', 0)
             delta_phi = info.get('delta_phi', 0)
+            sis_info = info.get('sis_trans')
             sicstr_vio = 1 if delta_phi > 0 else 0
             # real_dist = info.get('real_dist', 0)
             # real_dist_road = info.get('real_dist_road', 0)

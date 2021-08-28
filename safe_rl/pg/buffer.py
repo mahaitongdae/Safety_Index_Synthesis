@@ -24,6 +24,8 @@ class CPOBuffer:
         self.cret_buf = np.zeros(size, dtype=np.float32)    # cost return
         self.cval_buf = np.zeros(size, dtype=np.float32)    # cost value
         self.logp_buf = np.zeros(size, dtype=np.float32)
+        self.sis_info_buf = np.zeros(combined_shape(size, [2,4,2]), dtype=np.float32)
+
         self.pi_info_bufs = {k: np.zeros([size] + list(v), dtype=np.float32) 
                              for k,v in pi_info_shapes.items()}
         self.sorted_pi_info_keys = keys_as_sorted_list(self.pi_info_bufs)
@@ -32,7 +34,7 @@ class CPOBuffer:
         self.ptr, self.path_start_idx, self.max_size = 0, 0, size
         self.cost_lim = cost_lim
 
-    def store(self, obs, act, rew, val, cost, cval, logp, pi_info):
+    def store(self, obs, act, rew, val, cost, cval, logp, pi_info, sis_info):
         assert self.ptr < self.max_size     # buffer has to have room so you can store
         self.obs_buf[self.ptr] = obs
         self.act_buf[self.ptr] = act
@@ -41,6 +43,7 @@ class CPOBuffer:
         self.cost_buf[self.ptr] = cost
         self.cval_buf[self.ptr] = cval
         self.logp_buf[self.ptr] = logp
+        self.sis_info_buf[self.ptr] = sis_info
         for k in self.sorted_pi_info_keys:
             self.pi_info_bufs[k][self.ptr] = pi_info[k]
         self.ptr += 1
@@ -81,4 +84,4 @@ class CPOBuffer:
 
         return [self.obs_buf, self.act_buf, self.adv_buf,
                 self.cadv_buf, self.ret_buf, self.cret_buf,
-                self.logp_buf, self.violation_buf] + values_as_sorted_list(self.pi_info_bufs)
+                self.logp_buf, self.violation_buf, self.sis_info_buf] + values_as_sorted_list(self.pi_info_bufs)
