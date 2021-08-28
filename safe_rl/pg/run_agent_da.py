@@ -9,6 +9,7 @@ from safe_rl.pg.network import count_vars, \
                                get_vars, \
                                mlp_actor_critic, mlp_actor_critic_with_lam,\
                                placeholders, \
+                               placeholder,\
                                placeholders_from_spaces
 from safe_rl.pg.utils import values_as_sorted_list
 from safe_rl.utils.logx import EpochLogger
@@ -81,8 +82,10 @@ def run_polopt_agent(env_fn,
     x_ph, a_ph = placeholders_from_spaces(env.observation_space, env.action_space)
 
     # Inputs to computation graph for batch data
-    adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph, sis_info_ph\
+    adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph\
         = placeholders(*(None for _ in range(6)))
+
+    sis_info_ph = placeholder([2, 4, 2])
 
     # Inputs to computation graph for special purposes
     surr_cost_rescale_ph = tf.placeholder(tf.float32, shape=())
@@ -146,7 +149,7 @@ def run_polopt_agent(env_fn,
             # param_init = np.log(penalty_init)
             param_init = [0.3, 1.0, 1.0] #  # margin, k, power
             sis_paras = tf.get_variable('penalty_param',
-                                          initializer=float(param_init),
+                                          initializer=param_init,
                                           trainable=agent.adaptive_sis,
                                           dtype=tf.float32)
         # penalty = tf.exp(penalty_param)
@@ -452,7 +455,7 @@ def run_polopt_agent(env_fn,
                 r_total = r_total / (1 + cur_penalty)
                 buf.store(o, a, r_total, v_t, 0, 0, logp_t, pi_info_t)
             else:
-                buf.store(o, a, r, v_t, delta_phi, vc_t, logp_t, pi_info_t)
+                buf.store(o, a, r, v_t, delta_phi, vc_t, logp_t, pi_info_t, sis_info)
             logger.store(VVals=v_t, CostVVals=vc_t)
 
             o = o2
@@ -513,9 +516,10 @@ def run_polopt_agent(env_fn,
         logger.log_tabular('EpCost', with_min_and_max=True)
         logger.log_tabular('EpLen', average_only=True)
         logger.log_tabular('EpPhiCstrVio', with_min_and_max=True)
-        logger.log_tabular('SisParaMargin')
-        logger.log_tabular('SisParaN')
-        logger.log_tabular('SisParaPower')
+        logger.log_tabular('SisParaMargin', average_only=True)
+        logger.log_tabular('SisParaK', average_only=True)
+        logger.log_tabular('SisParaPower', average_only=True)
+        logger.log_tabular('LossSisParas', average_only=True)
         logger.log_tabular('CumulativeCost', cumulative_cost)
         logger.log_tabular('CostRate', cost_rate)
 

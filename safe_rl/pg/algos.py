@@ -31,7 +31,8 @@ def ppo_dual_ascent(**kwargs):
         objective_penalized=True,
         learn_penalty=False,
         penalty_param_loss=False,
-        dual_ascent=True
+        dual_ascent=True,
+        adaptive_sis=True
     )
     agent = PPO_Agent_with_Mu(**ppo_kwargs)
     run_polopt_agent(agent=agent, **kwargs)

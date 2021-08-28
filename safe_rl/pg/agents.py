@@ -156,9 +156,11 @@ class PPO_Agent_with_Mu(Agent):
         self.clip_ratio = clip_ratio
         self.pi_lr = pi_lr
         self.mu_lr = mu_lr
+        self.sis_para_lr = sis_para_lr
         self.pi_iters = pi_iters
         self.mu_iters = mu_iters
         self.kl_margin = kl_margin
+        self.adaptive_sis = kwargs.get('adaptive_sis')
         self.params.update(dict(
             clipped_adv=True,
             first_order=True,
