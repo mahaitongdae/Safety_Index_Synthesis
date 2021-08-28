@@ -147,6 +147,7 @@ class PPO_Agent_with_Mu(Agent):
     def __init__(self, clip_ratio=0.2,
                  pi_lr=3e-4,
                  mu_lr=3e-5,
+                 sis_para_lr=1e-5,
                  pi_iters=80,
                  mu_iters=5,
                  kl_margin=1.2,
@@ -191,6 +192,15 @@ class PPO_Agent_with_Mu(Agent):
 
         for i in range(self.mu_iters):
             self.sess.run([train_mu], feed_dict=inputs)
+
+    def update_sis_paras(self, inputs):
+
+        # Things we need from training package
+        train_sis_paras = self.training_package['train_sis_paras']
+
+        # Run the update
+        self.sess.run([train_sis_paras], feed_dict=inputs)
+
 
     def log(self):
         self.logger.log_tabular('StopIter', average_only=True)

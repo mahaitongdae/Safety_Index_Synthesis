@@ -45,6 +45,9 @@ def run_polopt_agent(env_fn,
                      vf_iters=80,
                      # Mu learning:
                      dual_ascent_interval=1,
+                     # sis para learning:
+                     hazards_size=0.5,
+                     train_sis_paras_interval=6,
                      # Logging:
                      logger=None, 
                      logger_kwargs=dict(), 
@@ -78,7 +81,8 @@ def run_polopt_agent(env_fn,
     x_ph, a_ph = placeholders_from_spaces(env.observation_space, env.action_space)
 
     # Inputs to computation graph for batch data
-    adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph = placeholders(*(None for _ in range(6)))
+    adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph, sis_info_ph\
+        = placeholders(*(None for _ in range(6)))
 
     # Inputs to computation graph for special purposes
     surr_cost_rescale_ph = tf.placeholder(tf.float32, shape=())
@@ -89,7 +93,7 @@ def run_polopt_agent(env_fn,
     pi, logp, logp_pi, pi_info, pi_info_phs, d_kl, ent, v, vc, multiplier = ac_outs
 
     # Organize placeholders for zipping with data from buffer on updates
-    buf_phs = [x_ph, a_ph, adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph]
+    buf_phs = [x_ph, a_ph, adv_ph, cadv_ph, ret_ph, cret_ph, logp_old_ph, vio_ph, sis_info_ph]
     buf_phs += values_as_sorted_list(pi_info_phs)
 
     # Organize symbols we have to compute at each step of acting in env
@@ -137,16 +141,22 @@ def run_polopt_agent(env_fn,
     #  Create computation graph for penalty learning, if applicable           #
     #=========================================================================#
 
-    # if agent.use_penalty:
-    #     with tf.variable_scope('penalty'):
-    #         # param_init = np.log(penalty_init)
-    #         param_init = np.log(max(np.exp(penalty_init)-1, 1e-8))
-    #         penalty_param = tf.get_variable('penalty_param',
-    #                                       initializer=float(param_init),
-    #                                       trainable=agent.learn_penalty,
-    #                                       dtype=tf.float32)
-    #     # penalty = tf.exp(penalty_param)
-    #     penalty = tf.nn.softplus(penalty_param)
+    if agent.adaptive_sis:
+        with tf.variable_scope('sis_para'):
+            # param_init = np.log(penalty_init)
+            param_init = [0.3, 1.0, 1.0] #  # margin, k, power
+            sis_paras = tf.get_variable('penalty_param',
+                                          initializer=float(param_init),
+                                          trainable=agent.adaptive_sis,
+                                          dtype=tf.float32)
+        # penalty = tf.exp(penalty_param)
+        sis_paras = tf.clip_by_value(sis_paras, [0.0, 0.5, 0.1], [1.0, 3.0, 2.0])
+    else:
+        param_init = [0.1, 1.0, 2.0]  # # margin, k, power
+        sis_paras = tf.get_variable('penalty_param',
+                                          initializer=float(param_init),
+                                          trainable=agent.adaptive_sis,
+                                          dtype=tf.float32)
     #
     # if agent.learn_penalty:
     #     if agent.penalty_param_loss:
@@ -200,6 +210,23 @@ def run_polopt_agent(env_fn,
     # Loss function for mu
     mu_loss = -cs_cost
 
+    # Loss function for sis_para
+    d_t = sis_info_ph[:, 0, :, 0]
+    dotd_t = sis_info_ph[:, 0, :, 1]
+    d_tp1 = sis_info_ph[:, 1, :, 0]
+    dotd_tp1 = sis_info_ph[:, 1, :, 1]
+
+
+    sigma, k, n = sis_paras[0], sis_paras[1], sis_paras[2]
+    phi_t = (sigma + hazards_size) ** n - d_t ** n - k * dotd_t
+    phi_t = tf.clip_by_value(tf.reduce_max(phi_t, axis=1), 0, 100)
+
+    phi_tp1 = (sigma + hazards_size) ** n - d_tp1 ** n - k * dotd_tp1
+    phi_tp1 = tf.reduce_max(phi_tp1, axis=1)
+    delta_phi = phi_tp1 - phi_t
+
+    sis_paras_loss = tf.reduce_mean(tf.where(delta_phi > 0, delta_phi, tf.zeros_like(delta_phi)))
+
     # Optimizer-specific symbols
     if agent.trust_region:
 
@@ -231,8 +258,10 @@ def run_polopt_agent(env_fn,
 
         train_mu = MpiAdamOptimizer(learning_rate=agent.mu_lr).minimize(mu_loss)
 
+        train_sis_paras = MpiAdamOptimizer(learning_rate=agent.sis_para_lr).minimize(sis_paras_loss)
+
         # Prepare training package for agent
-        training_package = dict(train_pi=train_pi, train_mu=train_mu)
+        training_package = dict(train_pi=train_pi, train_mu=train_mu, train_sis_paras=train_sis_paras)
 
     else:
         raise NotImplementedError
@@ -309,11 +338,15 @@ def run_polopt_agent(env_fn,
 
         measures = dict(LossPi=pi_loss,
                         LossMu=mu_loss,
+                        LossSisParas=sis_paras_loss,
                         Penalty=penalty,
                         Violation=clipped_vio,
                         Multiplier=clipped_multiplier,
                         LossV=v_loss,
-                        Entropy=ent)
+                        Entropy=ent,
+                        SisParaMargin=sis_paras[0],
+                        SisParaK=sis_paras[1],
+                        SisParaPower=sis_paras[2])
         if not(agent.reward_penalized):
             measures['LossVC'] = vc_loss
         if agent.use_penalty:
@@ -338,6 +371,9 @@ def run_polopt_agent(env_fn,
         # =====================================================================#
         if epoch % dual_ascent_interval == 0:
             agent.update_mu(inputs)
+
+        if epoch % train_sis_paras_interval == 0:
+            agent.update_sis_paras(inputs)
 
         #=====================================================================#
         #  Update value function                                              #
@@ -475,6 +511,9 @@ def run_polopt_agent(env_fn,
         logger.log_tabular('EpCost', with_min_and_max=True)
         logger.log_tabular('EpLen', average_only=True)
         logger.log_tabular('EpPhiCstrVio', with_min_and_max=True)
+        logger.log_tabular('SisParaMargin')
+        logger.log_tabular('SisParaN')
+        logger.log_tabular('SisParaPower')
         logger.log_tabular('CumulativeCost', cumulative_cost)
         logger.log_tabular('CostRate', cost_rate)
 
