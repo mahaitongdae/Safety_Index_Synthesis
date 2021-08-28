@@ -320,7 +320,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         self.done = True
         self.phi = None
         self.sis_info = dict()
-        self.set_sis_paras(k=1, sigma=0.04, n=2)
+        self.set_sis_paras(sigma=0.04, k=1,  n=2)
 
     def parse(self, config):
         ''' Parse a config dict - see self.DEFAULT for description '''
@@ -1399,7 +1399,7 @@ class Engine(gym.Env, gym.utils.EzPickle):
         else:
             raise NotImplementedError
 
-    def set_sis_paras(self, k, sigma, n):
+    def set_sis_paras(self, sigma, k, n):
         self.sis_para_k = k
         self.sis_para_sigma = sigma
         self.sis_para_n = n
