@@ -420,6 +420,7 @@ def run_polopt_agent(env_fn,
             ep_ret += r
             ep_cost += c
             ep_len += 1
+            ep_sicstr_vio += sicstr_vio
 
             terminal = d or (ep_len == max_ep_len)
             if terminal or (t==local_steps_per_epoch-1):

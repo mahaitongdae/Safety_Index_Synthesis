@@ -86,10 +86,10 @@ def main2(algo, seed, exp_name, cpu):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--env_name', type=str, default='Safexp-CustomPush1-v0')
+    parser.add_argument('--env_name', type=str, default='Safexp-CustomGoal3-v0')
     parser.add_argument('--algo', type=str, default='ppo_dual_ascent')
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--exp_name', type=str, default='for exp')
+    parser.add_argument('--exp_name', type=str, default='phi_0')
     parser.add_argument('--cpu', type=int, default=1)
     args = parser.parse_args()
     exp_name = args.exp_name if not(args.exp_name=='') else None
