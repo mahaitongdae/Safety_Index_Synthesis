@@ -414,6 +414,8 @@ def run_polopt_agent(env_fn,
         # if agent.use_penalty:
         #     cur_penalty = sess.run(penalty)
         cur_penalty = 0 # todo: remove relevant with cur_penalty
+        cur_sis_paras = sess.run(sis_paras)
+        env.set_sis_paras(*cur_sis_paras)
 
         for t in range(local_steps_per_epoch):
 
