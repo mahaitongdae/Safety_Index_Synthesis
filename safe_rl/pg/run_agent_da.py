@@ -47,7 +47,7 @@ def run_polopt_agent(env_fn,
                      # Mu learning:
                      dual_ascent_interval=1,
                      # sis para learning:
-                     hazards_size=0.5,
+                     hazards_size=0.25,
                      train_sis_paras_interval=6,
                      # Logging:
                      logger=None, 
