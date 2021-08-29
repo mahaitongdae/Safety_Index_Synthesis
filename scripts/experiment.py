@@ -13,7 +13,7 @@ def main(env_name, algo, seed, exp_name, cpu):
 
     # Verify experiment
 
-    algo_list = ['ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo', 'ppo_dual_ascent']
+    algo_list = ['ppo', 'ppo_lagrangian', 'trpo', 'trpo_lagrangian', 'cpo', 'ppo_dual_ascent_sis']
 
     algo = algo.lower()
     assert algo in algo_list, "Invalid algo"
@@ -87,7 +87,7 @@ if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
     parser.add_argument('--env_name', type=str, default='Safexp-CustomGoal3-v0')
-    parser.add_argument('--algo', type=str, default='ppo_dual_ascent')
+    parser.add_argument('--algo', type=str, default='ppo_dual_ascent_sis')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--exp_name', type=str, default='ada_test')
     parser.add_argument('--cpu', type=int, default=1)

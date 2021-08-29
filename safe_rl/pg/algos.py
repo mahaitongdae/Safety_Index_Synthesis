@@ -24,7 +24,7 @@ def ppo_lagrangian(**kwargs):
     agent = PPOAgent(**ppo_kwargs)
     run_polopt_agent(agent=agent, **kwargs)
 
-def ppo_dual_ascent(**kwargs):
+def ppo_dual_ascent_sis(**kwargs):
     # PPO with multiplier network.
     ppo_kwargs = dict(
         reward_penalized=False,
