@@ -48,7 +48,7 @@ def run_polopt_agent(env_fn,
                      dual_ascent_interval=1,
                      # sis para learning:
                      hazards_size=0.25,
-                     train_sis_paras_interval=6,
+                     train_sis_paras_interval=3,
                      # Logging:
                      logger=None, 
                      logger_kwargs=dict(), 
@@ -68,6 +68,7 @@ def run_polopt_agent(env_fn,
     np.random.seed(seed)
 
     env = env_fn()
+    hazards_size = env.hazards_size
 
     agent.set_logger(logger)
 
