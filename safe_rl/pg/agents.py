@@ -147,7 +147,7 @@ class PPO_Agent_with_Mu(Agent):
     def __init__(self, clip_ratio=0.2,
                  pi_lr=3e-4,
                  mu_lr=3e-5,
-                 sis_para_lr=5e-5,
+                 sis_para_lr=5e-4,
                  pi_iters=80,
                  mu_iters=2,
                  kl_margin=1.2,
