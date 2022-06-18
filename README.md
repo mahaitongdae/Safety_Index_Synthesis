@@ -6,7 +6,7 @@ which includes implementations of most common RL algorithms with the state-of-th
 If you are interested in or want to contribute to PABAL, you can contact me or the [original creator](https://github.com/idthanm).
 
 ## Requirements
-**[Safe-control-gym](https://github.com/ManUtdMoon/safe-control-gym) is needed before running!**
+First, install [Safety-gym](https://github.com/openai/safety-gym). Then you might replace the engine.py in safety-gym package with our [custom engine](https://github.com/mahaitongdae/Safety_Index_Synthesis/blob/master/utils/engine_custom.py). We modify the engine.py to estimate the distance and velocity, so that the code could be more general to any other tasks with the distance and velocity observations/signals.
 
 To install other requirements:
 
