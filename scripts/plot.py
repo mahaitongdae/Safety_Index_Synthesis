@@ -268,7 +268,7 @@ def make_plots(all_logdirs, legend=None, xaxis=None, values=None, count=False,
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument('--logdir', nargs='*',default=['/home/mahaitong/PycharmProjects/safety-starter-agents/data/2021-08-31_ppo_dual_ascent_sis_Safexp-CustomGoal2-v0'])
+    parser.add_argument('--logdir', nargs='*')
     parser.add_argument('--legend', '-l', nargs='*')
     parser.add_argument('--xaxis', '-x', default='TotalEnvInteracts')
     parser.add_argument('--value', '-y', default='AverageEpRet', nargs='*')
