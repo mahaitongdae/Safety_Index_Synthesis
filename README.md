@@ -18,7 +18,7 @@ $ pip install seaborn matplotlib
 ```
 
 ## Training
-To train the algorithm(s) in the paper, run these commands or directly run `sh bash.sh` in `/train_scripts/`:
+To train the algorithm(s) in the paper, run these commands:
 ```train
 $ export PYTHONPATH=/your/path/to/Reachability_Constrained_RL/:$PYTHONPATH
 $ cd ./train_scripts/
