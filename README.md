@@ -3,7 +3,7 @@
 This is the reimplementation with tensorflow 1.x based on OpenAI safety-starter-agents.
 
 ## Installation and Dependencies
-Please refer to [OpenAI safety-starter-agents]{https://github.com/openai/safety-starter-agents} and [OpenAI safety gym]{https://github.com/openai/safety-gym} for installation first.
+Please refer to [OpenAI safety-starter-agents](https://github.com/openai/safety-starter-agents) and [OpenAI safety gym](https://github.com/openai/safety-gym) for installation first.
 
 For tensorflow 1.x, you could use
 ```[bash]
