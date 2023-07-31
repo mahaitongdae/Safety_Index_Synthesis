@@ -9,7 +9,7 @@ For tensorflow 1.x, you could use
 ```[bash]
 pip install tensorflow==1.15
 ```
-to install. Note that tensorflow 1.x does not support python 3.8 and later.
+to install. Note that tensorflow 1.x does not support python 3.8 or greater.
 
 Then 
 ```[bash]
